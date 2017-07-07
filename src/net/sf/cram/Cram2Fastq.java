@@ -15,7 +15,9 @@
  ******************************************************************************/
 package net.sf.cram;
 
-import htsjdk.samtools.SAMFileReader;
+import htsjdk.samtools.SamReader;
+import htsjdk.samtools.SamReaderFactory;
+import htsjdk.samtools.SAMFileSource;
 import htsjdk.samtools.SAMRecord;
 import htsjdk.samtools.SAMRecordIterator;
 import htsjdk.samtools.SAMSequenceRecord;
@@ -331,8 +333,8 @@ public class Cram2Fastq {
 				return;
 
 			log.info("Sorting overflow BAM: ", fo.file.length());
-			SAMFileReader.setDefaultValidationStringency(ValidationStringency.SILENT);
-			SAMFileReader r = new SAMFileReader(fo.file);
+			SamReaderFactory.setDefaultValidationStringency(ValidationStringency.SILENT);
+			SamReader r = SamReaderFactory.makeDefault().open(fo.file);
 			SAMRecordIterator iterator = r.iterator();
 			if (!iterator.hasNext()) {
 				r.close();
