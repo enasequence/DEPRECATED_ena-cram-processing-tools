@@ -25,7 +25,7 @@ import htsjdk.samtools.cram.encoding.reader.AbstractReader;
 import htsjdk.samtools.cram.encoding.reader.DataReader;
 import htsjdk.samtools.cram.structure.ReadTag;
 import htsjdk.samtools.cram.structure.SubstitutionMatrix;
-import net.sf.cram.common.Utils;
+import htsjdk.samtools.util.SequenceUtil;
 
 public abstract class AbstractFastqReader extends AbstractReader {
 	private ReadFeatureBuffer rfBuf = new ReadFeatureBuffer();
@@ -166,8 +166,8 @@ public abstract class AbstractFastqReader extends AbstractReader {
 					scores[i] += 33;
 
 			if (reverseNegativeReads && (flags & CramFlags.NEGATIVE_STRAND_FLAG) != 0) {
-				Utils.reverseComplement(bases, 0, readLength);
-				Utils.reverse(scores, 0, readLength);
+				SequenceUtil.reverseComplement(bases, 0, readLength);
+				SequenceUtil.reverse(scores, 0, readLength);
 			}
 
 			writeRead(readName, flags, bases, scores);

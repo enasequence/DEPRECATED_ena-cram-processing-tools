@@ -35,10 +35,10 @@ public class MultiFastqOutputter extends AbstractFastqReader {
 	private SAMFileHeader header;
 
 	public MultiFastqOutputter(OutputStream[] streams, OutputStream cacheOverFlowStream,
-			ReferenceSource referenceSource, SAMFileHeader header, long counter) {
+			net.sf.cram.ref.ReferenceSource referenceSource2, SAMFileHeader header, long counter) {
 		this.streams = streams;
 		this.cacheOverFlowStream = cacheOverFlowStream;
-		this.referenceSource = referenceSource;
+		this.referenceSource = referenceSource2;
 		this.header = header;
 		super.counterOffset = counter;
 	}

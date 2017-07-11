@@ -66,7 +66,6 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 
-import net.sf.cram.CramFixHeader;
 import cipheronly.CipherInputStream_256;
 
 import com.beust.jcommander.JCommander;
@@ -106,36 +105,7 @@ public class Utils {
 				return String.format("%d.%d", major, minor);
 		}
 	}
-
-	public static final Version CRAM_VERSION = getVersion();
-
-	public static void reverse(final byte[] array, int offset, int len) {
-		final int lastIndex = len - 1;
-
-		int i, j;
-		for (i = offset, j = offset + lastIndex; i < j; ++i, --j) {
-			final byte tmp = array[i];
-			array[i] = array[j];
-			array[j] = tmp;
-		}
-		if (len % 2 == 1) {
-			array[i] = array[i];
-		}
-	}
-
-	public static void reverseComplement(final byte[] bases, int offset, int len) {
-		final int lastIndex = len - 1;
-
-		int i, j;
-		for (i = offset, j = offset + lastIndex; i < j; ++i, --j) {
-			final byte tmp = complement(bases[i]);
-			bases[i] = complement(bases[j]);
-			bases[j] = tmp;
-		}
-		if (len % 2 == 1) {
-			bases[i] = complement(bases[i]);
-		}
-	}
+	
 
 	public static final byte a = 'a', c = 'c', g = 'g', t = 't', n = 'n', A = 'A', C = 'C', G = 'G', T = 'T', N = 'N';
 
@@ -698,23 +668,7 @@ public class Utils {
 			if (delegate != null)
 				delegate.close();
 		}
-	}
-
-	private static Version getVersion() {
-		String version = CramFixHeader.class.getPackage().getImplementationVersion();
-		if (version == null)
-			return new Version(3, 0, 0);
-		else
-			return new Version(version);
-	}
-
-	public static int getMajorVersion() {
-		return CRAM_VERSION.major;
-	}
-
-	public static int getMinorVersion() {
-		return CRAM_VERSION.minor;
-	}
+	}	
 
 	public static String join(String[] words, String delimiter) {
 		StringBuilder sb = new StringBuilder();
@@ -736,7 +690,7 @@ public class Utils {
 		sb.append("\n");
 		jc.usage(sb);
 
-		System.out.println("Version " + CRAM_VERSION.toString());
+		System.out.println("Version " + CramVersions.DEFAULT_CRAM_VERSION.toString());
 		System.out.println(sb.toString());
 	}
 

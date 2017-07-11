@@ -17,7 +17,6 @@ package net.sf.cram;
 
 import htsjdk.samtools.SamReader;
 import htsjdk.samtools.SamReaderFactory;
-import htsjdk.samtools.SAMFileSource;
 import htsjdk.samtools.SAMRecord;
 import htsjdk.samtools.SAMRecordIterator;
 import htsjdk.samtools.SAMSequenceRecord;
@@ -34,6 +33,7 @@ import htsjdk.samtools.cram.structure.CramHeader;
 import htsjdk.samtools.cram.structure.Slice;
 import htsjdk.samtools.seekablestream.SeekableFileStream;
 import htsjdk.samtools.util.Log;
+import net.sf.cram.ref.ReferenceSource;
 
 import java.io.BufferedOutputStream;
 import java.io.ByteArrayInputStream;
@@ -49,7 +49,6 @@ import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.zip.GZIPOutputStream;
 
-import net.sf.cram.ref.ReferenceSource;
 
 import com.beust.jcommander.JCommander;
 import com.beust.jcommander.Parameter;
@@ -92,11 +91,7 @@ public class Cram2Fastq {
 
 		SeekableFileStream sfs = new SeekableFileStream(params.cramFile);
 		CramHeader cramHeader = CramIO.readCramHeader(sfs);
-		ReferenceSource referenceSource = new ReferenceSource(params.reference);
-		FixBAMFileHeader fix = new FixBAMFileHeader(referenceSource);
-		fix.setConfirmMD5(!params.skipMD5Checks);
-		fix.setIgnoreMD5Mismatch(params.ignoreMD5Mismatch);
-		fix.fixSequences(cramHeader.getSamFileHeader().getSequenceDictionary().getSequences());
+		ReferenceSource referenceSource = new ReferenceSource(params.reference);		
 		sfs.seek(0);
 
 		if (params.reference == null)
@@ -180,8 +175,7 @@ public class Cram2Fastq {
 		protected abstract void containerHasBeenRead() throws IOException;
 
 		protected void doRun() throws IOException {
-			cramHeader = CramIO.readCramHeader(cramIS);
-			FixBAMFileHeader fix = new FixBAMFileHeader(referenceSource);
+			cramHeader = CramIO.readCramHeader(cramIS);			
 
 			reader = newReader();
 			reader.reverseNegativeReads = reverse;
@@ -200,13 +194,6 @@ public class Cram2Fastq {
 
 						ref = referenceSource.getReferenceBases(sequence, true);
 
-						if (!s.validateRefMD5(ref)) {
-							log.error(String
-									.format("Reference sequence MD5 mismatch for slice: seq id %d, start %d, span %d, expected MD5 %s",
-											s.sequenceId, s.alignmentStart, s.alignmentSpan,
-											String.format("%032x", new BigInteger(1, s.refMD5))));
-							throw new RuntimeException("Reference checksum mismatch.");
-						}
 					} else
 						ref = new byte[0];
 

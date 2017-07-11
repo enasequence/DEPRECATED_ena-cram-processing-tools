@@ -16,7 +16,6 @@
 package net.sf.cram;
 
 import htsjdk.samtools.Defaults;
-//import htsjdk.samtools.IndexAggregate;
 import htsjdk.samtools.SAMFileWriter;
 import htsjdk.samtools.SAMFileWriterFactory;
 import htsjdk.samtools.SAMRecord;
@@ -33,6 +32,7 @@ import htsjdk.samtools.cram.structure.Slice;
 import htsjdk.samtools.seekablestream.SeekableStream;
 import htsjdk.samtools.util.BlockCompressedOutputStream;
 import htsjdk.samtools.util.Log;
+import htsjdk.samtools.util.SequenceUtil;
 
 import java.io.BufferedOutputStream;
 import java.io.File;
@@ -40,15 +40,12 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.PrintStream;
-import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.zip.GZIPOutputStream;
 
 import net.sf.cram.CramTools.LevelConverter;
-import net.sf.cram.FixBAMFileHeader.MD5MismatchError;
 import net.sf.cram.common.Utils;
-import net.sf.cram.ref.ReferenceRegion;
 import net.sf.cram.ref.ReferenceSource;
 
 import com.beust.jcommander.JCommander;
@@ -114,62 +111,17 @@ public class Cram2Bam {
 
 		ReferenceSource referenceSource = new ReferenceSource(params.reference);
 		referenceSource.setDownloadTriesBeforeFailing(params.downloadTriesBeforeFailing);
-
-		if (!params.countOnly) {
-			FixBAMFileHeader fix = new FixBAMFileHeader(referenceSource);
-			fix.setConfirmMD5(!params.skipMD5Checks);
-			fix.setInjectURI(params.injectURI);
-			fix.setIgnoreMD5Mismatch(params.ignoreMD5Mismatch);
-			try {
-				log.info("Preparing the header...");
-				fix.fixSequences(cramHeader.getSamFileHeader().getSequenceDictionary().getSequences());
-			} catch (MD5MismatchError e) {
-				log.error(e.getMessage());
-				System.exit(1);
-			}
-			fix.addCramtoolsPG(cramHeader.getSamFileHeader());
-		}
+		
 
 		BlockCompressedOutputStream.setDefaultCompressionLevel(Defaults.COMPRESSION_LEVEL);
 		SAMFileWriterFactory samFileWriterFactory = new SAMFileWriterFactory();
 		samFileWriterFactory.setAsyncOutputBufferSize(params.asyncBamBuffer);
 		samFileWriterFactory.setCreateIndex(false);
 		samFileWriterFactory.setCreateMd5File(false);
-		samFileWriterFactory.setUseAsyncIo(params.syncBamOutput);
-
-		SAMFileWriter writer = createSAMFileWriter(params, cramHeader, samFileWriterFactory);
+		samFileWriterFactory.setUseAsyncIo(params.syncBamOutput);		
 
 		htsjdk.samtools.cram.structure.Container c = null;
 		AlignmentSliceQuery location = null;
-		
-		/*
-		if (!params.locations.isEmpty()) {
-			if (params.locations.size() > 1)
-				throw new RuntimeException("Only one location is supported.");
-			if (!(is instanceof SeekableStream))
-				throw new RuntimeException("Cannot use random access on a stream.");
-
-			location = new AlignmentSliceQuery(params.locations.get(0));
-			location.sequenceId = cramHeader.getSamFileHeader().getSequenceIndex(location.sequence);
-			if (location.sequenceId < 0) {
-				log.error("Reference sequence not found for name: " + location.sequence);
-				return;
-			}
-
-			try {
-				log.info("Seeking for the query " + location.toString());
-				SeekableStream cramStream = (SeekableStream) is;
-				IndexAggregate ia = IndexAggregate.forDataFile(cramStream, cramHeader.getSamFileHeader()
-						.getSequenceDictionary());
-				long offset = ia.seek(location.sequenceId, location.start, location.end, cramStream);
-				if (offset < 0)
-					throw new ReadNotFoundException();
-
-			} catch (ReadNotFoundException e) {
-				log.warn("Nothing found for query " + location);
-				return;
-			}
-		}*/
 
 		long recordCount = 0;
 		long baseCount = 0;
@@ -211,35 +163,6 @@ public class Cram2Bam {
 			parser.getRecords(c, cramRecords, ValidationStringency.SILENT);
 			parseTime += System.nanoTime() - time;
 
-			for (int i = 0; i < c.slices.length; i++) {
-				Slice s = c.slices[i];
-				if (s.sequenceId < 0)
-					continue;
-
-				SAMSequenceRecord sequence = cramHeader.getSamFileHeader().getSequence(s.sequenceId);
-				ReferenceRegion ref = referenceSource.getRegion(sequence, s.alignmentStart, s.alignmentStart
-						+ s.alignmentSpan - 1);
-				if (ref == null)
-					log.error("Can't find reference to validate slice md5: " + sequence.getSequenceIndex() + " "
-							+ sequence.getSequenceName());
-				else {
-					String sliceMD5 = String.format("%032x", new BigInteger(1, s.refMD5));
-					String md5 = ref.md5(s.alignmentStart, s.alignmentSpan);
-					if (!md5.equals(sliceMD5)) {
-						log.error(String
-								.format("Reference sequence MD5 mismatch for slice: seq id %d, start %d, span %d, expected MD5 %s",
-										s.sequenceId, s.alignmentStart, s.alignmentSpan, sliceMD5));
-						if (!params.resilient)
-							System.exit(1);
-					}
-				}
-			}
-
-			long time1 = System.nanoTime();
-			n.normalizeRecordsForReferenceSource(cramRecords, referenceSource, c.header.substitutionMatrix);
-			long time2 = System.nanoTime();
-			normTime += time2 - time1;
-
 			Cram2SamRecordFactory c2sFactory = new Cram2SamRecordFactory(cramHeader.getSamFileHeader());
 
 			long c2sTime = 0;
@@ -275,8 +198,8 @@ public class Cram2Bam {
 			}
 
 			log.info(String
-					.format("CONTAINER READ: io %dms, parse %dms, norm %dms, convert %dms, BAM write %dms, %d bases in %d records",
-							c.readTime / 1000000, c.parseTime / 1000000, (time2 - time1) / 1000000, c2sTime / 1000000,
+					.format("CONTAINER READ: io %dms, parse %dms,convert %dms, BAM write %dms, %d bases in %d records",
+							c.readTime / 1000000, c.parseTime / 1000000, c2sTime / 1000000,
 							sWriteTime / 1000000, c.bases, c.nofRecords));
 
 			if (enough || (params.outputFile == null && System.out.checkError()))
@@ -287,7 +210,7 @@ public class Cram2Bam {
 			System.out.printf("READS: %d; BASES: %d\n", recordCount, baseCount);
 		}
 
-		writer.close();
+		
 
 		log.warn(String.format("TIMES: io %ds, parse %ds, norm %ds, convert %ds, BAM write %ds", readTime / 1000000000,
 				parseTime / 1000000000, normTime / 1000000000, samTime / 1000000000, writeTime / 1000000000));
@@ -322,42 +245,6 @@ public class Cram2Bam {
 			r.mateAlignmentStart = SAMRecord.NO_ALIGNMENT_START;
 	}
 
-	private static SAMFileWriter createSAMFileWriter(Params params, CramHeader cramHeader,
-			SAMFileWriterFactory samFileWriterFactory) throws IOException {
-		/*
-		 * building sam writer, sometimes we have to go deeper to get to the
-		 * required functionality:
-		 */
-		SAMFileWriter writer = null;
-		if (params.outputFastq) {
-			if (params.cramURL == null) {
-				writer = new FastqSAMFileWriter(System.out, null, cramHeader.getSamFileHeader());
-			} else {
-				writer = new FastqSAMFileWriter(Utils.getFileName(params.cramURL), false, cramHeader.getSamFileHeader());
-
-			}
-		} else if (params.outputFastqGz) {
-			if (params.cramURL == null) {
-				GZIPOutputStream gos = new GZIPOutputStream(System.out);
-				PrintStream ps = new PrintStream(gos);
-				writer = new FastqSAMFileWriter(ps, null, cramHeader.getSamFileHeader());
-			} else {
-				writer = new FastqSAMFileWriter(Utils.getFileName(params.cramURL), true, cramHeader.getSamFileHeader());
-
-			}
-		} else if (params.outputFile == null) {
-			OutputStream os = new BufferedOutputStream(System.out);
-			if (params.outputBAM) {
-				writer = new SAMFileWriterFactory().makeBAMWriter(cramHeader.getSamFileHeader(), true, os);
-			} else {
-				writer = Utils.createSAMTextWriter(samFileWriterFactory, os, cramHeader.getSamFileHeader(),
-						params.printSAMHeader);
-			}
-		} else {
-			writer = samFileWriterFactory.makeSAMOrBAMWriter(cramHeader.getSamFileHeader(), true, params.outputFile);
-		}
-		return writer;
-	}
 
 	@Parameters(commandDescription = "CRAM to BAM conversion. ")
 	static class Params {
