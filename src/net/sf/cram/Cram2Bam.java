@@ -28,21 +28,18 @@ import htsjdk.samtools.cram.build.CramNormalizer;
 import htsjdk.samtools.cram.structure.ContainerIO;
 import htsjdk.samtools.cram.structure.CramCompressionRecord;
 import htsjdk.samtools.cram.structure.CramHeader;
-import htsjdk.samtools.cram.structure.Slice;
-import htsjdk.samtools.seekablestream.SeekableStream;
+
+
 import htsjdk.samtools.util.BlockCompressedOutputStream;
 import htsjdk.samtools.util.Log;
-import htsjdk.samtools.util.SequenceUtil;
 
-import java.io.BufferedOutputStream;
+
+
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.OutputStream;
-import java.io.PrintStream;
 import java.util.ArrayList;
-import java.util.List;
-import java.util.zip.GZIPOutputStream;
+
 
 import net.sf.cram.CramTools.LevelConverter;
 import net.sf.cram.common.Utils;
@@ -89,9 +86,6 @@ public class Cram2Bam {
 		if (params.reference == null)
 			log.warn("No reference file specified, remote access over internet may be used to download public sequences. ");
 
-		if (params.locations == null)
-			params.locations = new ArrayList<String>();
-
 		InputStream is = null;
 		try {
 			is = Utils.openCramInputStream(params.cramURL, params.decrypt, params.password);
@@ -104,11 +98,6 @@ public class Cram2Bam {
 
 		CramHeader cramHeader = CramIO.readCramHeader(is);
 
-		if (params.printSAMHeaderOnly) {
-			System.out.println(cramHeader.getSamFileHeader().getTextHeader());
-			return;
-		}
-
 		ReferenceSource referenceSource = new ReferenceSource(params.reference);
 		referenceSource.setDownloadTriesBeforeFailing(params.downloadTriesBeforeFailing);
 		
@@ -120,8 +109,7 @@ public class Cram2Bam {
 		samFileWriterFactory.setCreateMd5File(false);
 		samFileWriterFactory.setUseAsyncIo(params.syncBamOutput);		
 
-		htsjdk.samtools.cram.structure.Container c = null;
-		AlignmentSliceQuery location = null;
+		htsjdk.samtools.cram.structure.Container c = null;		
 
 		long recordCount = 0;
 		long baseCount = 0;
@@ -137,8 +125,6 @@ public class Cram2Bam {
 
 		ContainerParser parser = new ContainerParser(cramHeader.getSamFileHeader());
 		while (true) {
-			if (params.maxContainers-- <= 0)
-				break;
 
 			time = System.nanoTime();
 			c = ContainerIO.readContainer(cramHeader.getVersion(), is);
@@ -147,12 +133,7 @@ public class Cram2Bam {
 
 			readTime += System.nanoTime() - time;
 
-			// for random access check if the sequence is the one we are looking
-			// for:
-			if (location != null && location.sequenceId != c.sequenceId)
-				break;
-
-			if (params.countOnly && location == null && params.requiredFlags == 0 && params.filteringFlags == 0) {
+			if (params.countOnly && params.requiredFlags == 0 && params.filteringFlags == 0) {
 				recordCount += c.nofRecords;
 				baseCount += c.bases;
 				continue;
@@ -172,17 +153,7 @@ public class Cram2Bam {
 			for (CramCompressionRecord r : cramRecords) {
 				// enforcing a special way to calculate template size:
 				restoreMateInfo(r);
-
-				// check if the record ends before the query start:
-				if (location != null && r.sequenceId == location.sequenceId && r.getAlignmentEnd() < location.start)
-					continue;
-
-				// we got all the reads for random access:
-				if (location != null && location.sequenceId == r.sequenceId && location.end < r.alignmentStart) {
-					enough = true;
-					break;
-				}
-
+				
 				time = System.nanoTime();
 				SAMRecord s = c2sFactory.create(r);
 
@@ -272,9 +243,6 @@ public class Cram2Bam {
 		@Parameter(names = { "--print-sam-header" }, description = "Print SAM header when writing SAM format.")
 		boolean printSAMHeader = false;
 
-		@Parameter(names = { "-H" }, description = "Print SAM header and quit.")
-		boolean printSAMHeaderOnly = false;
-
 		@Parameter(names = { "-h", "--help" }, description = "Print help and quit")
 		boolean help = false;
 
@@ -286,9 +254,6 @@ public class Cram2Bam {
 
 		@Parameter(names = { "--calculate-nm-tag" }, description = "Calculate NM tag.")
 		boolean calculateNmTag = false;
-
-		@Parameter(description = "A region to access specified as <sequence name>[:<start inclusive>[-[<stop inclusive>]]")
-		List<String> locations;
 
 		@Parameter(names = { "--decrypt" }, description = "Decrypt the file.")
 		boolean decrypt = false;
@@ -325,9 +290,6 @@ public class Cram2Bam {
 
 		@Parameter(names = { "--password", "-p" }, description = "Password to decrypt the file.")
 		public String password;
-
-		@Parameter(names = { "--max-containers" }, description = "Read only specified number of containers.", hidden = true)
-		long maxContainers = Long.MAX_VALUE;
 
 		@Parameter(names = { "--load-whole-reference-sequence" }, description = "Load all bases for each reference sequence required. ", hidden = true)
 		public boolean loadWholeReferenceSequence = false;

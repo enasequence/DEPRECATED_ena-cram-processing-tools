@@ -26,7 +26,6 @@ import com.beust.jcommander.JCommander;
 import com.beust.jcommander.Parameter;
 import com.beust.jcommander.Parameters;
 import htsjdk.samtools.ValidationStringency;
-import htsjdk.samtools.cram.common.CramVersions;
 import htsjdk.samtools.util.Log;
 import net.sf.cram.common.Utils;
 
