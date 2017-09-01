@@ -5,7 +5,6 @@ import java.util.Arrays;
 
 import htsjdk.samtools.SAMFileHeader;
 import htsjdk.samtools.SAMRecord;
-import htsjdk.samtools.cram.encoding.reader.NameCollate.IRead;
 
 public class FastqRead implements IRead {
 	int templateIndex;
