@@ -26,8 +26,9 @@ import com.beust.jcommander.JCommander;
 import com.beust.jcommander.Parameter;
 import com.beust.jcommander.Parameters;
 import htsjdk.samtools.ValidationStringency;
+import htsjdk.samtools.cram.common.CramVersions;
 import htsjdk.samtools.util.Log;
-import net.sf.cram.common.Utils;
+import htsjdk.samtools.seekablestream.SeekableFileStream;
 
 public class CramTools {
 	
@@ -106,7 +107,12 @@ public class CramTools {
 		String command = jc.getParsedCommand();
 
 		if (command == null || params.help) {
-			Utils.printUsage(jc);
+			StringBuilder sb = new StringBuilder();
+			sb.append("\n");
+			jc.usage(sb);
+
+			System.out.println("Version " + CramVersions.DEFAULT_CRAM_VERSION.toString());
+			System.out.println(sb.toString());
 			return;
 		}
 

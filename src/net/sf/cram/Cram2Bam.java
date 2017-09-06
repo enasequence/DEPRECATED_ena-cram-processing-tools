@@ -16,10 +16,8 @@
 package net.sf.cram;
 
 import htsjdk.samtools.Defaults;
-import htsjdk.samtools.SAMFileWriter;
 import htsjdk.samtools.SAMFileWriterFactory;
 import htsjdk.samtools.SAMRecord;
-import htsjdk.samtools.SAMSequenceRecord;
 import htsjdk.samtools.ValidationStringency;
 import htsjdk.samtools.cram.build.ContainerParser;
 import htsjdk.samtools.cram.build.Cram2SamRecordFactory;
@@ -28,21 +26,16 @@ import htsjdk.samtools.cram.build.CramNormalizer;
 import htsjdk.samtools.cram.structure.ContainerIO;
 import htsjdk.samtools.cram.structure.CramCompressionRecord;
 import htsjdk.samtools.cram.structure.CramHeader;
-
-
+import htsjdk.samtools.seekablestream.SeekableFileStream;
 import htsjdk.samtools.util.BlockCompressedOutputStream;
 import htsjdk.samtools.util.Log;
-
-
 
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
 
-
 import net.sf.cram.CramTools.LevelConverter;
-import net.sf.cram.common.Utils;
 import htsjdk.samtools.cram.ref.ReferenceSource; 
 
 import com.beust.jcommander.JCommander;
@@ -88,11 +81,9 @@ public class Cram2Bam {
 
 		InputStream is = null;
 		try {
-			is = Utils.openCramInputStream(params.cramURL, params.decrypt, params.password);
-			// is = new BufferedInputStream(new
-			// FileInputStream(params.cramURL));
+			is = new SeekableFileStream(params.cramFile);			
 		} catch (Exception e2) {
-			log.error("Failed to open CRAM from: " + params.cramURL, e2);
+			log.error("Failed to open CRAM from: " + params.cramFile, e2);
 			System.exit(1);
 		}
 
@@ -222,8 +213,8 @@ public class Cram2Bam {
 		@Parameter(names = { "-l", "--log-level" }, description = "Change log level: DEBUG, INFO, WARNING, ERROR.", converter = LevelConverter.class)
 		Log.LogLevel logLevel = Log.LogLevel.ERROR;
 
-		@Parameter(names = { "--input-cram-file", "-I" }, description = "The path or FTP URL to the CRAM file to uncompress. Omit if standard input (pipe).")
-		String cramURL;
+		@Parameter(names = { "--input-cram-file", "-I" }, description = "The path to the CRAM file to uncompress. Omit if standard input (pipe).")
+		File cramFile;
 
 		@Parameter(names = { "--reference-fasta-file", "-R" }, converter = FileConverter.class, description = "Path to the reference fasta file, it must be uncompressed and indexed (use 'samtools faidx' for example). ")
 		File reference;
