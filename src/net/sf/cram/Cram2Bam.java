@@ -43,7 +43,7 @@ import java.util.ArrayList;
 
 import net.sf.cram.CramTools.LevelConverter;
 import net.sf.cram.common.Utils;
-import net.sf.cram.ref.ReferenceSource;
+import htsjdk.samtools.cram.ref.ReferenceSource; 
 
 import com.beust.jcommander.JCommander;
 import com.beust.jcommander.Parameter;

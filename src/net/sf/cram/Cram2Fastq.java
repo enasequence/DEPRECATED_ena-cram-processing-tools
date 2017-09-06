@@ -33,7 +33,7 @@ import htsjdk.samtools.cram.structure.CramHeader;
 import htsjdk.samtools.cram.structure.Slice;
 import htsjdk.samtools.seekablestream.SeekableFileStream;
 import htsjdk.samtools.util.Log;
-import net.sf.cram.ref.ReferenceSource;
+import htsjdk.samtools.cram.ref.ReferenceSource;
 
 import java.io.BufferedOutputStream;
 import java.io.ByteArrayInputStream;
@@ -91,7 +91,7 @@ public class Cram2Fastq {
 
 		SeekableFileStream sfs = new SeekableFileStream(params.cramFile);
 		CramHeader cramHeader = CramIO.readCramHeader(sfs);
-		ReferenceSource referenceSource = new ReferenceSource(params.reference);		
+		ReferenceSource referenceSource = new ReferenceSource(params.reference);
 		sfs.seek(0);
 
 		if (params.reference == null)
