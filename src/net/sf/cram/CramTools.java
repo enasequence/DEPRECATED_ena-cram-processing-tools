@@ -28,12 +28,8 @@ import com.beust.jcommander.Parameters;
 import htsjdk.samtools.ValidationStringency;
 import htsjdk.samtools.cram.common.CramVersions;
 import htsjdk.samtools.util.Log;
-import htsjdk.samtools.seekablestream.SeekableFileStream;
 
-public class CramTools {
-	
-	
-	private static Log log = Log.getInstance(CramTools.class);
+public class CramTools {	
 
 	private static Map<String, Class<?>> classes = new TreeMap<String, Class<?>>();
 

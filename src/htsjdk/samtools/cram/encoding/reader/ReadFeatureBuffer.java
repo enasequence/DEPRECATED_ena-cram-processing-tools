@@ -175,7 +175,7 @@ class ReadFeatureBuffer {
 		}
 
 		List<CigarElement> list = new ArrayList<CigarElement>();
-		int totalOpLen = 1;
+		
 		CigarElement ce;
 		CigarOperator lastOperator = CigarOperator.MATCH_OR_MISMATCH;
 		int lastOpLen = 0;
@@ -190,8 +190,7 @@ class ReadFeatureBuffer {
 			if (gap > 0) {
 				if (lastOperator != CigarOperator.MATCH_OR_MISMATCH) {
 					list.add(new CigarElement(lastOpLen, lastOperator));
-					lastOpPos += lastOpLen;
-					totalOpLen += lastOpLen;
+					lastOpPos += lastOpLen;					
 					lastOpLen = gap;
 				} else {
 					lastOpLen += gap;
@@ -249,8 +248,7 @@ class ReadFeatureBuffer {
 			if (lastOperator != co) {
 				// add last feature
 				if (lastOpLen > 0) {
-					list.add(new CigarElement(lastOpLen, lastOperator));
-					totalOpLen += lastOpLen;
+					list.add(new CigarElement(lastOpLen, lastOperator));					
 				}
 				lastOperator = co;
 				lastOpLen = rfLen;

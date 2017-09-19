@@ -25,7 +25,6 @@ import htsjdk.samtools.cram.build.CramIO;
 import htsjdk.samtools.cram.encoding.reader.AbstractFastqReader;
 import htsjdk.samtools.cram.encoding.reader.DataReaderFactory;
 import htsjdk.samtools.cram.encoding.reader.MultiFastqOutputter;
-import htsjdk.samtools.cram.encoding.reader.ReaderToFastq;
 import htsjdk.samtools.cram.io.DefaultBitInputStream;
 import htsjdk.samtools.cram.structure.Container;
 import htsjdk.samtools.cram.structure.ContainerIO;
@@ -42,8 +41,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.math.BigInteger;
-import java.nio.ByteBuffer;
+
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -67,8 +65,7 @@ public class Cram2Fastq {
 		System.out.println("Version " + Cram2Fastq.class.getPackage().getImplementationVersion());
 		System.out.println(sb.toString());
 	}
-
-	@SuppressWarnings("restriction")
+	
 	public static void main(String[] args) throws Exception {
 		Params params = new Params();
 		JCommander jc = new JCommander(params);
@@ -90,7 +87,7 @@ public class Cram2Fastq {
 		Log.setGlobalLogLevel(params.logLevel);
 
 		SeekableFileStream sfs = new SeekableFileStream(params.cramFile);
-		CramHeader cramHeader = CramIO.readCramHeader(sfs);
+		
 		ReferenceSource referenceSource = new ReferenceSource(params.reference);
 		sfs.seek(0);
 
@@ -244,34 +241,7 @@ public class Cram2Fastq {
 			}
 		}
 	}
-
-	private static class SimpleDumper extends Dumper {
-		public SimpleDumper(InputStream cramIS, ReferenceSource referenceSource, int nofStreams, String fastqBaseName,
-				boolean gzip, int maxRecords, boolean reverse, int defaultQS, AtomicBoolean brokenPipe)
-				throws IOException {
-			super(cramIS, referenceSource, nofStreams, fastqBaseName, gzip, maxRecords, reverse, defaultQS, brokenPipe);
-		}
-
-		@Override
-		protected AbstractFastqReader newReader() {
-			return new ReaderToFastq();
-		}
-
-		@Override
-		protected void containerHasBeenRead() throws IOException {
-			ReaderToFastq reader = (ReaderToFastq) super.reader;
-			for (int i = 0; i < outputs.length; i++) {
-				ByteBuffer buf = reader.bufs[i];
-				OutputStream os = outputs[i].outputStream;
-				buf.flip();
-				os.write(buf.array(), 0, buf.limit());
-				if (buf.limit() > 0)
-					outputs[i].empty = false;
-				buf.clear();
-			}
-		}
-	}
-
+	
 	private static class CollatingDumper extends Dumper {
 		private FileOutput fo = new FileOutput();
 		private String prefix;

@@ -110,9 +110,7 @@ public class Cram2Bam {
 		long samTime = 0;
 		long writeTime = 0;
 		long time = 0;
-		ArrayList<CramCompressionRecord> cramRecords = new ArrayList<CramCompressionRecord>(10000);
-
-		CramNormalizer n = new CramNormalizer(cramHeader.getSamFileHeader(), referenceSource);
+		ArrayList<CramCompressionRecord> cramRecords = new ArrayList<CramCompressionRecord>(10000);		
 
 		ContainerParser parser = new ContainerParser(cramHeader.getSamFileHeader());
 		while (true) {
