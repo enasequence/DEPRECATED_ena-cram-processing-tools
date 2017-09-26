@@ -1,24 +1,24 @@
 plugins {
-    id 'org.springframework.boot' version '1.5.6.RELEASE'
-    id 'org.hidetake.ssh' version '2.7.0'
+     id 'org.hidetake.ssh' version '2.9.0'
+     id 'com.github.johnrengelman.shadow' version '1.2.4'
 }
 
 apply plugin: 'java'
 apply plugin: 'idea'
-apply plugin: "jacoco"
 apply plugin: 'maven-publish'
+apply plugin: 'maven'
 apply plugin: 'application'
+apply plugin: 'com.github.johnrengelman.shadow'
 
 sourceCompatibility = 1.8
 
 group = 'uk.ac.ebi.ena'
 archivesBaseName = 'ena-cram-processing-tools'
+
 version='1.0.0'
+
 mainClassName = 'net.sf.cram.CramTools'
 
-
-
-bootRun.systemProperties = System.properties
 
 repositories {
     mavenLocal()
@@ -38,8 +38,8 @@ task wrapper(type: Wrapper) {
 
 jar.manifest {
     attributes('Implementation-Title': project.name,
-            'Implementation-Version': project.version,
-            'Source-Compatibility': project.sourceCompatibility
+               'Implementation-Version': project.version,
+               'Source-Compatibility': project.sourceCompatibility
     )
 }
 
@@ -47,72 +47,41 @@ task sourceJar(type: Jar) {
     from sourceSets.main.allJava
 }
 
+
 publishing {
-    publications {
-        mavenJava(MavenPublication) {
-            from components.java
-            artifact sourceJar {
-                classifier "sources"
-            }
-        }
+  publications {
+    mavenJava(MavenPublication) {
+      from components.java
+      artifact sourceJar { classifier "sources" }
     }
-    repositories {
-        maven {
-            credentials {
-                username = 'alexanderv' 
-                password = 'IhatePasswords2017' 
-            }
-            url "http://ena-dev:8081/artifactory/libs-release-local"
-        }
-    }
+  }
+  
+repositories {
+	maven {
+	        credentials {
+	            username artifactoryUsername
+	            password artifactoryPassword
+	        }
+	        url "http://ena-dev:8081/artifactory/libs-release-local"
+	    }
+	}
 }
+
 
 remotes {
-    dev {
-        host = 'ebi-cli-001'
+    prod_oy {
+        host = 'oy-ena-login-2'
         user = 'era'
-        identity = file("${System.properties['user.home']}/.ssh/id_rsa")
+        identity = file("${System.properties['user.home']}/.ssh/id_dsa")
         knownHosts = allowAnyHosts
     }
-    test {
-        host = 'ebi-cli-001'
+    prod_yoda {
+        host = 'hh-yoda-08-01.ebi.ac.uk'
         user = 'era'
-        identity = file("${System.properties['user.home']}/.ssh/id_rsa")
-        knownHosts = allowAnyHosts
-    }
-    prod {
-        host = 'ebi-cli-001'
-        user = 'era'
-        identity = file("${System.properties['user.home']}/.ssh/id_rsa")
+        identity = file("${System.properties['user.home']}/.ssh/id_dsa")
         knownHosts = allowAnyHosts
     }
 }
-
-/*
-task deployToDev << {
-    ssh.run {
-        session(remotes.dev) {
-            execute "~TODO_PULL_FROM_ARTIFACTORY_AND_COPY_TO_DEV_LOCATION"
-        }
-    }
-}
-
-task deployToTest << {
-    ssh.run {
-        session(remotes.test) {
-            execute "~TODO_PULL_FROM_ARTIFACTORY_AND_COPY_TO_TEST_LOCATION"
-        }
-    }
-}
-
-task deployToProd << {
-    ssh.run {
-        session(remotes.prod) {
-            execute "~TODO_PULL_FROM_ARTIFACTORY_AND_COPY_TO_PROD_LOCATION"
-        }
-    }    
-} 
-*/
 
 sourceSets {
 	main {
@@ -124,6 +93,36 @@ sourceSets {
 		  srcDir 'resources'
     	}
 	}
-	
-
 }
+
+task 'deploy-oy'( dependsOn: 'shadowJar' ) << {
+	def eraHome = '/homes/era/lib'
+    ssh.run {
+        session( remotes.prod_oy ) {
+            println "Uploading jar $shadowJar.archivePath.absolutePath to $eraHome"
+        	//put bytes: [0x0a, 0x0c], into: "/homes/era/empty.txt"
+        	put from: shadowJar.archivePath.absolutePath, into: "$eraHome/."
+        	println "creating symbolic link to $shadowJar.archiveName as $shadowJar.baseName.$shadowJar.extension"
+            def result = execute "ln -s -f $eraHome/$shadowJar.archiveName $eraHome/$shadowJar.baseName.$shadowJar.extension", ignoreError: true
+        	println result
+        }
+    }
+}
+
+
+task 'deploy-yoda'( dependsOn: 'shadowJar' ) << {
+	def eraHome = '/homes/era/lib'
+    ssh.run {
+        session( remotes.prod_yoda ) {
+            println "Uploading jar $shadowJar.archivePath.absolutePath to $eraHome"
+        	put bytes: [0x0a, 0x0c], into: "/homes/era/empty.txt"
+        	//put from: shadowJar.archivePath.absolutePath, into: "$eraHome/."
+        	println "creating symbolic link to $shadowJar.archiveName as $shadowJar.baseName.$shadowJar.extension"
+            def result = execute "ln -s -f $eraHome/$shadowJar.archiveName $eraHome/$shadowJar.baseName.$shadowJar.extension", ignoreError: true
+        	println result
+        }
+    }
+}
+
+
+task 'deploy-all' { dependsOn  'deploy-oy', 'deploy-yoda' }
