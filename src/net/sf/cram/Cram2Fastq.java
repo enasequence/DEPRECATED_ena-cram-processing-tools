@@ -15,25 +15,6 @@
  ******************************************************************************/
 package net.sf.cram;
 
-import htsjdk.samtools.SamReader;
-import htsjdk.samtools.SamReaderFactory;
-import htsjdk.samtools.SAMRecord;
-import htsjdk.samtools.SAMRecordIterator;
-import htsjdk.samtools.SAMSequenceRecord;
-import htsjdk.samtools.ValidationStringency;
-import htsjdk.samtools.cram.build.CramIO;
-import htsjdk.samtools.cram.encoding.reader.AbstractFastqReader;
-import htsjdk.samtools.cram.encoding.reader.DataReaderFactory;
-import htsjdk.samtools.cram.encoding.reader.MultiFastqOutputter;
-import htsjdk.samtools.cram.io.DefaultBitInputStream;
-import htsjdk.samtools.cram.structure.Container;
-import htsjdk.samtools.cram.structure.ContainerIO;
-import htsjdk.samtools.cram.structure.CramHeader;
-import htsjdk.samtools.cram.structure.Slice;
-import htsjdk.samtools.seekablestream.SeekableFileStream;
-import htsjdk.samtools.util.Log;
-import htsjdk.samtools.cram.ref.ReferenceSource;
-
 import java.io.BufferedOutputStream;
 import java.io.ByteArrayInputStream;
 import java.io.File;
@@ -41,17 +22,35 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.zip.GZIPOutputStream;
 
-
 import com.beust.jcommander.JCommander;
 import com.beust.jcommander.Parameter;
 import com.beust.jcommander.Parameters;
 import com.beust.jcommander.converters.FileConverter;
+
+import htsjdk.samtools.SAMRecord;
+import htsjdk.samtools.SAMRecordIterator;
+import htsjdk.samtools.SAMSequenceRecord;
+import htsjdk.samtools.SamReader;
+import htsjdk.samtools.SamReaderFactory;
+import htsjdk.samtools.ValidationStringency;
+import htsjdk.samtools.cram.build.CramIO;
+import htsjdk.samtools.cram.encoding.reader.AbstractFastqReader;
+import htsjdk.samtools.cram.encoding.reader.DataReaderFactory;
+import htsjdk.samtools.cram.encoding.reader.MultiFastqOutputter;
+import htsjdk.samtools.cram.io.DefaultBitInputStream;
+import htsjdk.samtools.cram.ref.CRAMReferenceSource;
+import htsjdk.samtools.cram.structure.Container;
+import htsjdk.samtools.cram.structure.ContainerIO;
+import htsjdk.samtools.cram.structure.CramHeader;
+import htsjdk.samtools.cram.structure.Slice;
+import htsjdk.samtools.seekablestream.SeekableFileStream;
+import htsjdk.samtools.util.Log;
+import net.sf.cram.ref.ENAReferenceSource;
 
 public class Cram2Fastq {
 	private static Log log = Log.getInstance(Cram2Fastq.class);
@@ -88,7 +87,7 @@ public class Cram2Fastq {
 
 		SeekableFileStream sfs = new SeekableFileStream(params.cramFile);
 		
-		ReferenceSource referenceSource = new ReferenceSource(params.reference);
+		CRAMReferenceSource referenceSource = new ENAReferenceSource(params.reference);
 		sfs.seek(0);
 
 		if (params.reference == null)
@@ -118,7 +117,7 @@ public class Cram2Fastq {
 	private static abstract class Dumper implements Runnable {
 		protected InputStream cramIS;
 		protected byte[] ref = null;
-		protected ReferenceSource referenceSource;
+		protected CRAMReferenceSource referenceSource;
 		protected FileOutput[] outputs;
 		protected long maxRecords = -1;
 		protected CramHeader cramHeader;
@@ -128,7 +127,7 @@ public class Cram2Fastq {
 		private boolean reverse = false;
 		protected AtomicBoolean brokenPipe;
 
-		public Dumper(InputStream cramIS, ReferenceSource referenceSource, int nofStreams, String fastqBaseName,
+		public Dumper(InputStream cramIS, CRAMReferenceSource referenceSource, int nofStreams, String fastqBaseName,
 				boolean gzip, long maxRecords, boolean reverse, int defaultQS, AtomicBoolean brokenPipe)
 				throws IOException {
 
@@ -249,7 +248,7 @@ public class Cram2Fastq {
 		private MultiFastqOutputter multiFastqOutputter;
 		private int defaultQS;
 
-		public CollatingDumper(InputStream cramIS, ReferenceSource referenceSource, int nofStreams,
+		public CollatingDumper(InputStream cramIS, CRAMReferenceSource referenceSource, int nofStreams,
 				String fastqBaseName, boolean gzip, long maxRecords, boolean reverse, int defaultQS,
 				AtomicBoolean brokenPipe) throws IOException {
 			super(cramIS, referenceSource, nofStreams, fastqBaseName, gzip, maxRecords, reverse, defaultQS, brokenPipe);

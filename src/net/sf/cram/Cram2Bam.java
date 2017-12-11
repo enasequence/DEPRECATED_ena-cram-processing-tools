@@ -15,6 +15,16 @@
  ******************************************************************************/
 package net.sf.cram;
 
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.ArrayList;
+
+import com.beust.jcommander.JCommander;
+import com.beust.jcommander.Parameter;
+import com.beust.jcommander.Parameters;
+import com.beust.jcommander.converters.FileConverter;
+
 import htsjdk.samtools.Defaults;
 import htsjdk.samtools.SAMFileWriterFactory;
 import htsjdk.samtools.SAMRecord;
@@ -23,25 +33,15 @@ import htsjdk.samtools.cram.build.ContainerParser;
 import htsjdk.samtools.cram.build.Cram2SamRecordFactory;
 import htsjdk.samtools.cram.build.CramIO;
 import htsjdk.samtools.cram.build.CramNormalizer;
+import htsjdk.samtools.cram.ref.CRAMReferenceSource;
 import htsjdk.samtools.cram.structure.ContainerIO;
 import htsjdk.samtools.cram.structure.CramCompressionRecord;
 import htsjdk.samtools.cram.structure.CramHeader;
 import htsjdk.samtools.seekablestream.SeekableFileStream;
 import htsjdk.samtools.util.BlockCompressedOutputStream;
 import htsjdk.samtools.util.Log;
-
-import java.io.File;
-import java.io.IOException;
-import java.io.InputStream;
-import java.util.ArrayList;
-
 import net.sf.cram.CramTools.LevelConverter;
-import htsjdk.samtools.cram.ref.ReferenceSource; 
-
-import com.beust.jcommander.JCommander;
-import com.beust.jcommander.Parameter;
-import com.beust.jcommander.Parameters;
-import com.beust.jcommander.converters.FileConverter;
+import net.sf.cram.ref.ENAReferenceSource;
 
 public class Cram2Bam {
 	private static Log log = Log.getInstance(Cram2Bam.class);
@@ -89,8 +89,9 @@ public class Cram2Bam {
 
 		CramHeader cramHeader = CramIO.readCramHeader(is);
 
-		ReferenceSource referenceSource = new ReferenceSource(params.reference);
-		referenceSource.setDownloadTriesBeforeFailing(params.downloadTriesBeforeFailing);
+		CRAMReferenceSource referenceSource = new ENAReferenceSource(params.reference);
+		( (ENAReferenceSource)referenceSource).setDownloadTriesBeforeFailing(params.downloadTriesBeforeFailing);
+		
 		
 
 		BlockCompressedOutputStream.setDefaultCompressionLevel(Defaults.COMPRESSION_LEVEL);

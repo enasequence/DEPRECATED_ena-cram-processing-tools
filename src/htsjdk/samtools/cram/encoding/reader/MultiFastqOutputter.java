@@ -14,8 +14,8 @@ import htsjdk.samtools.SAMFileWriter;
 import htsjdk.samtools.SAMFileWriterFactory;
 import htsjdk.samtools.SAMRecord;
 import htsjdk.samtools.SAMSequenceRecord;
+import htsjdk.samtools.cram.ref.CRAMReferenceSource;
 import htsjdk.samtools.util.Log;
-import htsjdk.samtools.cram.ref.ReferenceSource;
 
 public class MultiFastqOutputter extends AbstractFastqReader {
 	private static final Log log = Log.getInstance(MultiFastqOutputter.class);
@@ -31,11 +31,11 @@ public class MultiFastqOutputter extends AbstractFastqReader {
 	private OutputStream cacheOverFlowStream;
 	private byte[] prefix;
 	private long counter = 1;
-	private ReferenceSource referenceSource;
+	private CRAMReferenceSource referenceSource;
 	private SAMFileHeader header;
 
 	public MultiFastqOutputter(OutputStream[] streams, OutputStream cacheOverFlowStream,
-			ReferenceSource referenceSource2, SAMFileHeader header, long counter) {
+			CRAMReferenceSource referenceSource2, SAMFileHeader header, long counter) {
 		this.streams = streams;
 		this.cacheOverFlowStream = cacheOverFlowStream;
 		this.referenceSource = referenceSource2;
