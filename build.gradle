@@ -5,12 +5,19 @@ plugins {
 
 apply plugin: 'java'
 apply plugin: 'idea'
+apply plugin: 'eclipse'
 apply plugin: 'maven-publish'
 apply plugin: 'maven'
 apply plugin: 'application'
 apply plugin: 'com.github.johnrengelman.shadow'
 
 sourceCompatibility = 1.8
+
+compileJava {
+	options.compilerArgs += ["-XDignore.symbol.file", "-Xdoclint:none", "-Xlint:none", "-nowarn"]
+	options.fork = true
+	options.forkOptions.executable = 'javac'
+}
 
 group = 'uk.ac.ebi.ena'
 archivesBaseName = 'ena-cram-processing-tools'
@@ -85,19 +92,8 @@ remotes {
     }
 }
 
-sourceSets {
-	main {
-		java {
-			srcDir 'src'			
-		}
 
-		resources {
-		  srcDir 'resources'
-    	}
-	}
-}
-
-task 'deploy-oy'( dependsOn: 'shadowJar' ) << {
+task 'deploy-oy'( dependsOn: 'shadowJar' ) doLast {
 	def eraHome = '/homes/era/lib'
     ssh.run {
         session( remotes.prod_oy ) {
@@ -112,7 +108,7 @@ task 'deploy-oy'( dependsOn: 'shadowJar' ) << {
 }
 
 
-task 'deploy-yoda'( dependsOn: 'shadowJar' ) << {
+task 'deploy-yoda'( dependsOn: 'shadowJar' ) doLast {
 	def eraHome = '/homes/era/lib'
     ssh.run {
         session( remotes.prod_yoda ) {

@@ -29,6 +29,7 @@ import htsjdk.samtools.reference.ReferenceSequence;
 import htsjdk.samtools.reference.ReferenceSequenceFile;
 import htsjdk.samtools.util.Log;
 
+
 public class Utils {
 
 	private static Log log = Log.getInstance(Utils.class);
