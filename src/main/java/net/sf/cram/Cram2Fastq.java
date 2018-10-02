@@ -18,6 +18,7 @@ package net.sf.cram;
 import java.io.BufferedOutputStream;
 import java.io.ByteArrayInputStream;
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -83,37 +84,48 @@ public class Cram2Fastq {
 			System.exit(1);
 		}
 
-		Log.setGlobalLogLevel(params.logLevel);
+		Log.setGlobalLogLevel( params.logLevel );
+		main2( params );
+	}
 
-		SeekableFileStream sfs = new SeekableFileStream(params.cramFile);
+	
+	static void 
+	main2( Params params ) throws FileNotFoundException, IOException, Exception 
+	{
+		SeekableFileStream sfs = new SeekableFileStream( params.cramFile );
 		
 		CRAMReferenceSource referenceSource = new ENAReferenceSource( /* params.reference */ );
-		sfs.seek(0);
+		sfs.seek( 0 );
 
-		if (params.reference == null)
-			log.warn("No reference file specified, remote access over internet may be used to download public sequences. ");
+		if( params.reference == null )
+			log.warn( "No reference file specified, remote access over internet may be used to download public sequences. " );
 
-		final AtomicBoolean brokenPipe = new AtomicBoolean(false);
-		try {
-			sun.misc.Signal.handle(new sun.misc.Signal("PIPE"), new sun.misc.SignalHandler() {
-				@Override
-				public void handle(sun.misc.Signal sig) {
-					brokenPipe.set(true);
+		final AtomicBoolean brokenPipe = new AtomicBoolean( false );
+		try 
+		{
+			sun.misc.Signal.handle( new sun.misc.Signal( "PIPE" ), new sun.misc.SignalHandler() 
+			{
+				@Override public void 
+				handle( sun.misc.Signal sig ) 
+				{
+					brokenPipe.set( true );
 				}
 			});
-		} catch (IllegalArgumentException e) {
+		}catch ( IllegalArgumentException e )
+		{
 			e.printStackTrace();
 		}
 
-		CollatingDumper d = new CollatingDumper(sfs, referenceSource, 3, params.fastqBaseName, params.gzip,
-				params.maxRecords, params.reverse, params.defaultQS, brokenPipe);
+		CollatingDumper d = new CollatingDumper( sfs, referenceSource, params.nofStreams, params.fastqBaseName, params.gzip,
+												 params.maxRecords, params.reverse, params.defaultQS, brokenPipe );
 		d.prefix = params.prefix;
 		d.run();
 
-		if (d.exception != null)
+		if( d.exception != null )
 			throw d.exception;
 	}
 
+	
 	private static abstract class Dumper implements Runnable {
 		protected InputStream cramIS;
 		protected byte[] ref = null;
@@ -436,6 +448,8 @@ public class Cram2Fastq {
 
 		@Parameter(names = { "--skip-md5-check" }, description = "Skip MD5 checks when reading the header.")
 		public boolean skipMD5Checks = false;
+		
+		public int nofStreams = 3;
 	}
 
 }
