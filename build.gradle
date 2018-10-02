@@ -78,14 +78,14 @@ repositories {
 
 
 remotes {
-    prod_oy {
-        host = 'oy-ena-login-2'
+    prod_sra {
+        host = 'sra-login-2'
         user = 'era'
         identity = file("${System.properties['user.home']}/.ssh/id_dsa")
         knownHosts = allowAnyHosts
     }
     prod_yoda {
-        host = 'hh-yoda-08-01.ebi.ac.uk'
+        host = 'yoda-login-2'
         user = 'era'
         identity = file("${System.properties['user.home']}/.ssh/id_dsa")
         knownHosts = allowAnyHosts
@@ -93,10 +93,10 @@ remotes {
 }
 
 
-task 'deploy-oy'( dependsOn: 'shadowJar' ) doLast {
+task 'deploy-sra'( dependsOn: 'shadowJar' ) doLast {
 	def eraHome = '/homes/era/lib'
     ssh.run {
-        session( remotes.prod_oy ) {
+        session( remotes.prod_sra ) {
             println "Uploading jar $shadowJar.archivePath.absolutePath to $eraHome"
         	//put bytes: [0x0a, 0x0c], into: "/homes/era/empty.txt"
         	put from: shadowJar.archivePath.absolutePath, into: "$eraHome/."
@@ -123,7 +123,7 @@ task 'deploy-yoda'( dependsOn: 'shadowJar' ) doLast {
 }
 
 
-task 'deploy-all' { dependsOn  'deploy-oy', 'deploy-yoda' }
+task 'deploy-all' { dependsOn  'deploy-sra', 'deploy-yoda' }
 
 
 test {
