@@ -89,7 +89,7 @@ public class Cram2Bam {
 
 		CramHeader cramHeader = CramIO.readCramHeader(is);
 
-		CRAMReferenceSource referenceSource = new ENAReferenceSource(params.reference);
+		CRAMReferenceSource referenceSource = new ENAReferenceSource( /* params.reference */ );
 		( (ENAReferenceSource)referenceSource).setDownloadTriesBeforeFailing(params.downloadTriesBeforeFailing);
 		
 		
@@ -215,7 +215,7 @@ public class Cram2Bam {
 		@Parameter(names = { "--input-cram-file", "-I" }, description = "The path to the CRAM file to uncompress. Omit if standard input (pipe).")
 		File cramFile;
 
-		@Parameter(names = { "--reference-fasta-file", "-R" }, converter = FileConverter.class, description = "Path to the reference fasta file, it must be uncompressed and indexed (use 'samtools faidx' for example). ")
+//		@Parameter(names = { "--reference-fasta-file", "-R" }, converter = FileConverter.class, description = "Path to the reference fasta file, it must be uncompressed and indexed (use 'samtools faidx' for example). ")
 		File reference;
 
 		@Parameter(names = { "--output-bam-file", "-O" }, converter = FileConverter.class, description = "The path to the output BAM file.")

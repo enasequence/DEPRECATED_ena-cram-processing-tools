@@ -87,7 +87,7 @@ public class Cram2Fastq {
 
 		SeekableFileStream sfs = new SeekableFileStream(params.cramFile);
 		
-		CRAMReferenceSource referenceSource = new ENAReferenceSource(params.reference);
+		CRAMReferenceSource referenceSource = new ENAReferenceSource( /* params.reference */ );
 		sfs.seek(0);
 
 		if (params.reference == null)
@@ -407,7 +407,7 @@ public class Cram2Fastq {
 		@Parameter(names = { "--input-cram-file", "-I" }, converter = FileConverter.class, description = "The path to the CRAM file to uncompress. Omit if standard input (pipe).")
 		File cramFile;
 
-		@Parameter(names = { "--reference-fasta-file", "-R" }, converter = FileConverter.class, description = "Path to the reference fasta file, it must be uncompressed and indexed (use 'samtools faidx' for example). ")
+//		@Parameter(names = { "--reference-fasta-file", "-R" }, converter = FileConverter.class, description = "Path to the reference fasta file, it must be uncompressed and indexed (use 'samtools faidx' for example). ")
 		File reference;
 
 		@Parameter(names = { "--fastq-base-name", "-F" }, description = "'_number.fastq[.gz] will be appended to this string to obtain output fastq file name. If this parameter is omitted then all reads are printed with no garanteed order.")
