@@ -19,7 +19,7 @@ import java.util.regex.Pattern;
  * @author vadim
  * 
  */
-class PathPattern {
+public class PathPattern {
 
 	private String pathPatternFormat;
 	private Pattern pattern = Pattern.compile("%(\\d+)s");
