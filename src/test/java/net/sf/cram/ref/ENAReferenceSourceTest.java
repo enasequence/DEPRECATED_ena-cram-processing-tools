@@ -14,8 +14,8 @@ package net.sf.cram.ref;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Arrays;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import org.junit.Assert;
 import org.junit.Test;
@@ -38,14 +38,28 @@ ENAReferenceSourceTest
     @Test public void
     test() throws IOException
     {
-        Path cache = Files.createTempDirectory( "tmp-ref-cache" );
+    	String[] refs = new String[] { "fd9ca7dfdde04b03cbdb695877193918", 
+    			                       "03e7a85b8170cdbe9c069bd4ccd30b9a",
+    								   "75cf94b19ae9b525eb9f3b4cb7f2c609",
+    								   "0bdd9cff24d3747dd10598123096f572" };
+    	
+    	
+    	Path cache = Files.createTempDirectory( "tmp-ref-cache" );
         Path refdir = cache.resolve( "%2s/%2s/%s" );
         ENAReferenceSource rs = new ENAReferenceSource( refdir.toString().replaceAll( "\\\\+", "/" ) );
-     
-        long fetched_length = Stream.of( "fd9ca7dfdde04b03cbdb695877193918", 
-                                         "03e7a85b8170cdbe9c069bd4ccd30b9a",
-                                         "75cf94b19ae9b525eb9f3b4cb7f2c609",
-                                         "0bdd9cff24d3747dd10598123096f572" )
+        rs.setLoggerWrapper( 
+	        new ENAReferenceSource.LoggerWrapper() 
+	        {
+				@Override public void debug( Object... messageParts ) { System.out.println( null == messageParts ? "null" : Arrays.asList( messageParts ) ); }
+				@Override public void warn( Object... messageParts )  { System.out.println( null == messageParts ? "null" : Arrays.asList( messageParts ) ); }
+				@Override public void error( Object... messageParts ) { System.err.println( null == messageParts ? "null" : Arrays.asList( messageParts ) ); }			
+				@Override public void info( Object... messageParts )  { System.out.println( null == messageParts ? "null" : Arrays.asList( messageParts ) ); }
+				
+			} 
+	    );
+        
+        //remote fetches only
+        long fetched_length = Arrays.stream( refs )
                                     .collect( Collectors.summarizingLong( md5 -> { return getRef( rs, md5 ).length; } ) )
                                     .getSum(); 
 
@@ -55,6 +69,30 @@ ENAReferenceSourceTest
                                   .getSum();
         
         Assert.assertEquals( fetched_length, stored_length );
+        
+        Assert.assertEquals( refs.length, rs.getRemoteFetchCount() );
+        Assert.assertEquals( 0, rs.getDiskFetchCount() );
+        Assert.assertEquals( 0, rs.getMemFetchCount() );
+        
+        rs.clearMemCache();
+        
+        //disk cache access only
+        fetched_length = Arrays.stream( refs )
+        					   .collect( Collectors.summarizingLong( md5 -> { return getRef( rs, md5 ).length; } ) )
+        					   .getSum(); 
+        
+        Assert.assertEquals( refs.length, rs.getRemoteFetchCount() );
+        Assert.assertEquals( refs.length, rs.getDiskFetchCount() );
+        Assert.assertEquals( 0, rs.getMemFetchCount() );
+        
+        //memory cache access only
+        fetched_length = Arrays.stream( refs )
+        					   .collect( Collectors.summarizingLong( md5 -> { return getRef( rs, md5 ).length; } ) )
+        					   .getSum();
+        
+        Assert.assertEquals( refs.length, rs.getRemoteFetchCount() );
+        Assert.assertEquals( refs.length, rs.getDiskFetchCount() );
+        Assert.assertEquals( refs.length, rs.getMemFetchCount() );
     }
 
     

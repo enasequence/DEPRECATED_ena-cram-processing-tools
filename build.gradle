@@ -79,13 +79,13 @@ repositories {
 
 remotes {
     prod_sra {
-        host = 'sra-login-2'
+        host = 'sra-login'
         user = 'era'
         identity = file("${System.properties['user.home']}/.ssh/id_dsa")
         knownHosts = allowAnyHosts
     }
     prod_yoda {
-        host = 'yoda-login-2'
+        host = 'yoda-login'
         user = 'era'
         identity = file("${System.properties['user.home']}/.ssh/id_dsa")
         knownHosts = allowAnyHosts

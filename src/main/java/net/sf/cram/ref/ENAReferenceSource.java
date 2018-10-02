@@ -92,13 +92,35 @@ ENAReferenceSource implements CRAMReferenceSource
 	private List<PathPattern> refPatterns = new ArrayList<PathPattern>();
 	private List<PathPattern> cachePatterns = new ArrayList<PathPattern>();
 
-
+	Map<String, Integer>  disk_map  = new HashMap<>();
+	private AtomicInteger disk_counter = new AtomicInteger();
+	private AtomicLong    disk_sz = new AtomicLong();
+	private AtomicLong    disk_spent = new AtomicLong();
+	
 	Map<String, Integer>  download_map  = new HashMap<>();
 	private AtomicInteger download_counter = new AtomicInteger();
 	private AtomicLong    download_sz = new AtomicLong();
-	private AtomicInteger memory_hit_counter = new AtomicInteger();
-	private AtomicLong    total_spent = new AtomicLong();
+	private AtomicLong    download_spent = new AtomicLong();
+
+	private AtomicInteger mem_counter = new AtomicInteger();
 	
+	int getRemoteFetchCount()
+	{
+		return download_counter.get();
+	}
+	
+	
+	int getDiskFetchCount()
+	{
+		return disk_counter.get();
+	}
+
+	
+	int getMemFetchCount()
+	{
+		return mem_counter.get();
+	}
+
 	
 	/*
 	 * 
@@ -180,25 +202,62 @@ ENAReferenceSource implements CRAMReferenceSource
 	
 	
 	public void 
-	clearCache()
+	clearMemCache()
 	{
 		cacheW.clear();
 	}
 
 	
     private byte[] 
-    findInCache( String name )
+    findInMemCache( String md5 )
     {
-        Reference<byte[]> r = cacheW.get( name );
+        Reference<byte[]> r = cacheW.get( md5 );
         if( r != null )
         {
             byte[] bytes = r.get();
             if( bytes != null )
+            {
+                log.debug( String.format( "% 6d Reference found in memory cache by md5: %s", mem_counter.incrementAndGet(), md5 ) );
                 return bytes;
+            }
         }
         return null;
     }
 
+    
+    private void
+    addToMemCache( String md5, byte[] bytes )
+    {
+    	cacheW.put( md5, new SoftReference<byte[]>( bytes ) );
+    }
+    
+    
+    private byte[]
+    findInFileCache( String md5 ) throws IOException
+    {
+    	long start = System.currentTimeMillis();
+	    for( PathPattern pathPattern : cachePatterns )
+	    {
+	        File file = new File( pathPattern.format( md5 ) );
+	        if( file.exists() )
+	        {
+	        	
+	            byte[] data = loadFromPath( file.getPath(), md5 );
+	            log.debug( String.format( ".% 5d Reference found on disk cache at the location %s sz:%d, total: %d, spent: %d, total spent: %d, attempt %d",
+                           disk_counter.incrementAndGet(),
+                           file.getPath(),
+                           data.length,
+                           disk_sz.addAndGet( data.length ),
+                           System.currentTimeMillis() - start,
+                           disk_spent.addAndGet( System.currentTimeMillis() - start ),
+                           disk_map.merge( md5, (Integer) 1, ( v1, v2 ) -> v1 + v2 ) ) );
+	            return data;
+	        }
+	    }
+	    
+	    return null;
+    }
+    
     
     @Override public synchronized byte[] 
     getReferenceBases( SAMSequenceRecord record, boolean tryNameVariants )
@@ -213,11 +272,6 @@ ENAReferenceSource implements CRAMReferenceSource
             md5 = Utils.calculateMD5String( bases );
             record.setAttribute( SAMSequenceRecord.MD5_TAG, md5 );
         }
-
-        cacheW.put( md5, new SoftReference<byte[]>( bases ) );
-
-        if( !cachePatterns.isEmpty() )
-            addToRefCache( md5, bases );
 
         return bases;
     }
@@ -258,10 +312,9 @@ ENAReferenceSource implements CRAMReferenceSource
             return null;
          
         { // check cache by md5:
-            byte[] bases = findInCache( md5 );
+            byte[] bases = findInMemCache( md5 );
             if( bases != null )
             {
-                log.debug( String.format( "% 6d Reference found in memory cache by md5: %s", memory_hit_counter.incrementAndGet(), md5 ) );
                 return ReferenceRegion.copyRegion( bases, 
                                                    record.getSequenceIndex(), 
                                                    record.getSequenceName(),
@@ -271,6 +324,7 @@ ENAReferenceSource implements CRAMReferenceSource
         }
 
         byte[] bases = null;
+        
         for( PathPattern pathPattern : cachePatterns )
         {
             File file = new File( pathPattern.format( md5 ) );
@@ -284,7 +338,7 @@ ENAReferenceSource implements CRAMReferenceSource
         { // try to fetch sequence by md5:
             try
             {
-                bases = findBasesByMD5( md5 );
+                bases = findBasesRemotelyByMD5( md5 );
             } catch( Exception e )
             {
                 if( e instanceof RuntimeException )
@@ -294,7 +348,7 @@ ENAReferenceSource implements CRAMReferenceSource
             
             if( bases != null )
             {
-                cacheW.put( md5, new SoftReference<byte[]>( bases ) );
+                addToMemCache( md5, bases );
 
                 if( !cachePatterns.isEmpty() )
                     addToRefCache( md5, bases );
@@ -319,20 +373,48 @@ ENAReferenceSource implements CRAMReferenceSource
             return null;
 
         { // check cache by md5:
-            byte[] bases = findInCache( md5 );
+            byte[] bases = findInMemCache( md5 );
             if( bases != null )
             {
-                log.debug( String.format( "% 6d Reference found in memory cache by md5: %s", memory_hit_counter.incrementAndGet(), md5 ) );
                 return bases;
             }
         }
 
-        byte[] bases = null;
 
+        byte[] bases = null;
+        {
+        	try
+        	{
+        		bases = findInFileCache( md5 );
+        		if( bases != null )
+                {
+        			addToMemCache( md5, bases );
+                    return bases;
+                }
+
+            } catch( Throwable t )
+            {
+            	if( t instanceof RuntimeException )
+            		throw (RuntimeException) t;
+            	throw new RuntimeException( t );
+            }
+        }
+        
+        
         { // try to fetch sequence by md5:
             try
             {
-                bases = findBasesByMD5( md5 );
+                bases = findBasesRemotelyByMD5( md5 );
+        		if( bases != null )
+                {
+        			addToMemCache( md5, bases );
+
+        			if( !cachePatterns.isEmpty() )
+                        addToRefCache( md5, bases );
+
+                    return bases;
+                }
+
             } catch( Throwable t )
             {
                 if( t instanceof RuntimeException )
@@ -340,10 +422,6 @@ ENAReferenceSource implements CRAMReferenceSource
                 throw new RuntimeException( t );
             }
             
-            if( bases != null )
-            {
-                return bases;
-            }
         }
 
         { // try @SQ:UR file location
@@ -457,7 +535,7 @@ ENAReferenceSource implements CRAMReferenceSource
 
     
     private byte[] 
-    findBasesByMD5( String md5 ) throws MalformedURLException, IOException
+    findBasesRemotelyByMD5( String md5 ) throws MalformedURLException, IOException
     {
         long start = System.currentTimeMillis();
         for( PathPattern p : refPatterns )
@@ -473,7 +551,7 @@ ENAReferenceSource implements CRAMReferenceSource
                                       data.length,
                                       download_sz.addAndGet( data.length ),
                                       System.currentTimeMillis() - start,
-                                      total_spent.addAndGet( System.currentTimeMillis() - start ),
+                                      download_spent.addAndGet( System.currentTimeMillis() - start ),
                                       download_map.merge( md5, (Integer) 1, ( v1, v2 ) -> v1 + v2 ) ) );
             return data;
         }
