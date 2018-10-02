@@ -22,7 +22,7 @@ compileJava {
 group = 'uk.ac.ebi.ena'
 archivesBaseName = 'ena-cram-processing-tools'
 
-version='1.0.0'
+version='1.1.0'
 
 mainClassName = 'net.sf.cram.CramTools'
 
