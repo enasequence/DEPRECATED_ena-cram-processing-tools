@@ -1,11 +1,5 @@
 package net.sf.cram.ref;
 
-import htsjdk.samtools.SAMException;
-import htsjdk.samtools.SAMSequenceRecord;
-import htsjdk.samtools.seekablestream.SeekableStream;
-import htsjdk.samtools.seekablestream.SeekableStreamFactory;
-import net.sf.cram.common.Utils;
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.MalformedURLException;
@@ -13,7 +7,17 @@ import java.nio.ByteBuffer;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Scanner;
-import java.util.regex.MatchResult;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+import org.checkerframework.checker.regex.RegexUtil;
+import org.checkerframework.checker.regex.qual.Regex;
+
+import htsjdk.samtools.SAMException;
+import htsjdk.samtools.SAMSequenceRecord;
+import htsjdk.samtools.seekablestream.SeekableStream;
+import htsjdk.samtools.seekablestream.SeekableStreamFactory;
+import net.sf.cram.common.Utils;
 
 
 /**
@@ -113,37 +117,49 @@ class ReferenceSequenceFromSeekable {
 		}
 	}
 
-	private static Map<String, FastaSequenceIndexEntry> buildIndex(InputStream is) {
-		Scanner scanner = new Scanner(is);
-
-		int sequenceIndex = 0;
-		Map<String, FastaSequenceIndexEntry> index = new HashMap<String, FastaSequenceIndexEntry>();
-		while (scanner.hasNext()) {
-			// Tokenize and validate the index line.
-			String result = scanner.findInLine("(.+)\\t+(\\d+)\\s+(\\d+)\\s+(\\d+)\\s+(\\d+)");
-			if (result == null)
-				throw new RuntimeException("Found invalid line in index file:" + scanner.nextLine());
-			MatchResult tokens = scanner.match();
-			if (tokens.groupCount() != 5)
-				throw new RuntimeException("Found invalid line in index file:" + scanner.nextLine());
-
-			// Skip past the line separator
-			scanner.nextLine();
-
-			// Parse the index line.
-			String contig = tokens.group(1);
-			long size = Long.valueOf(tokens.group(2));
-			long location = Long.valueOf(tokens.group(3));
-			int basesPerLine = Integer.valueOf(tokens.group(4));
-			int bytesPerLine = Integer.valueOf(tokens.group(5));
-
-			contig = SAMSequenceRecord.truncateSequenceName(contig);
-			// Build sequence structure
-			index.put(contig, new FastaSequenceIndexEntry(contig, location, size, basesPerLine, bytesPerLine,
-					sequenceIndex++));
+	
+	private static Map<String, FastaSequenceIndexEntry> 
+	buildIndex( InputStream is ) 
+	{
+		try( Scanner scanner = new Scanner( is ) )
+		{
+			int sequenceIndex = 0;
+			Map<String, FastaSequenceIndexEntry> index = new HashMap<String, FastaSequenceIndexEntry>();
+			while( scanner.hasNext() )
+			{
+				// Tokenize and validate the index line.
+				@Regex(5) String pattern = "(.+)\\t+(\\d+)\\s+(\\d+)\\s+(\\d+)\\s+(\\d+)";
+				Pattern compiled = Pattern.compile( pattern );
+				String result = scanner.findInLine( compiled );
+				if( result == null )
+					throw new RuntimeException( "Found invalid line in index file:" + scanner.nextLine() );
+				
+				@Regex(5) Matcher tokens = compiled.matcher( result );//scanner.match() );
+				
+				
+				if( !RegexUtil.isRegex( pattern, 5 ) )
+					throw new RuntimeException( "Regexp flawed: " + pattern );
+				
+				if( tokens.groupCount() != 5 )
+					throw new RuntimeException( "Found invalid line in index file:" + scanner.nextLine() );
+	
+				// Skip past the line separator
+				scanner.nextLine();
+	
+				// Parse the index line.
+				String contig = tokens.group( 1 );
+				long size = Long.valueOf(tokens.group(2));
+				long location = Long.valueOf(tokens.group(3));
+				int basesPerLine = Integer.valueOf(tokens.group(4));
+				int bytesPerLine = Integer.valueOf(tokens.group(5));
+	
+				contig = SAMSequenceRecord.truncateSequenceName(contig);
+				// Build sequence structure
+				index.put(contig, new FastaSequenceIndexEntry(contig, location, size, basesPerLine, bytesPerLine,
+						sequenceIndex++));
+			}
+			return index;
 		}
-		scanner.close();
-		return index;
 	}
 
 	private static class FastaSequenceIndexEntry {

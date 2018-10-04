@@ -40,6 +40,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
 
+import org.checkerframework.checker.regex.qual.Regex;
+
 import htsjdk.samtools.SAMSequenceRecord;
 import htsjdk.samtools.cram.io.InputStreamUtils;
 import htsjdk.samtools.cram.ref.CRAMReferenceSource;
@@ -152,7 +154,8 @@ ENAReferenceSource implements CRAMReferenceSource
 	static List<String>
 	splitRefPath( String paths )
 	{
-	    return Arrays.stream( paths.split( "(?i)(?<!(https?|ftp))(?!:([0-9]+))(:|;)" ) ).collect( Collectors.toList() );
+		@Regex(1) String r = "(?i)(?<!(https?|ftp))(?!:([0-9]+))(:|;)";
+	    return Arrays.stream( paths.split( r ) ).collect( Collectors.toList() );
 	}
 	
 	

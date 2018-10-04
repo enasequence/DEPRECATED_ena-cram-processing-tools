@@ -1,6 +1,6 @@
 plugins {
      id 'org.hidetake.ssh' version '2.9.0'
-     id 'com.github.johnrengelman.shadow' version '1.2.4'
+     id "com.github.johnrengelman.shadow" version "4.0.1"
 }
 
 apply plugin: 'java'
@@ -10,11 +10,12 @@ apply plugin: 'maven-publish'
 apply plugin: 'maven'
 apply plugin: 'application'
 apply plugin: 'com.github.johnrengelman.shadow'
+apply from:   'checkerframework.gradle'
 
 sourceCompatibility = 1.8
 
 compileJava {
-	options.compilerArgs += ["-XDignore.symbol.file", "-Xdoclint:none", "-Xlint:none", "-nowarn"]
+	options.compilerArgs = [ "-XDignore.symbol.file", "-Xdoclint:none", "-Xlint:none", "-nowarn" ]
 	options.fork = true
 	options.forkOptions.executable = 'javac'
 }
@@ -41,7 +42,7 @@ dependencies {
     testCompile 'junit:junit:4.12'
 }
 
-task wrapper(type: Wrapper) {
+wrapper{
     gradleVersion = '4.0.2'
 }
 
