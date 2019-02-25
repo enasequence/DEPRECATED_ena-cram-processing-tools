@@ -1,3 +1,14 @@
+/*
+ * Copyright 2019 EMBL - European Bioinformatics Institute
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this
+ * file except in compliance with the License. You may obtain a copy of the License at
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * Unless required by applicable law or agreed to in writing, software distributed under the
+ * License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
+ * CONDITIONS OF ANY KIND, either express or implied. See the License for the
+ * specific language governing permissions and limitations under the License.
+ */
+
 plugins {
      id 'org.hidetake.ssh' version '2.9.0'
      id "com.github.johnrengelman.shadow" version "4.0.1"
@@ -10,15 +21,9 @@ apply plugin: 'maven-publish'
 apply plugin: 'maven'
 apply plugin: 'application'
 apply plugin: 'com.github.johnrengelman.shadow'
-apply from:   'checkerframework.gradle'
+
 
 sourceCompatibility = 1.8
-
-compileJava {
-	options.compilerArgs = [ "-XDignore.symbol.file", "-Xdoclint:none", "-Xlint:none", "-nowarn" ]
-	options.fork = true
-	options.forkOptions.executable = 'javac'
-}
 
 group = 'uk.ac.ebi.ena'
 archivesBaseName = 'ena-cram-processing-tools'
@@ -27,6 +32,14 @@ version='1.1.0'
 
 mainClassName = 'net.sf.cram.CramTools'
 
+configurations.all {
+	if( !hasProperty( 'gitlab_private_token' ) )
+		project.ext.properties.gitlab_private_token = ''
+	else
+		project.ext.properties.gitlab_private_token = gitlab_private_token;
+}
+
+def private_token = project.ext.properties.gitlab_private_token
 
 repositories {
     mavenLocal()
@@ -42,10 +55,6 @@ dependencies {
     testCompile 'junit:junit:4.12'
 }
 
-wrapper{
-    gradleVersion = '4.0.2'
-}
-
 jar.manifest {
     attributes('Implementation-Title': project.name,
                'Implementation-Version': project.version,
@@ -59,21 +68,23 @@ task sourceJar(type: Jar) {
 
 
 publishing {
-  publications {
-    mavenJava(MavenPublication) {
-      from components.java
-      artifact sourceJar { classifier "sources" }
-    }
-  }
+	publications {
+    	mavenJava(MavenPublication) {
+      		from components.java
+      		artifact sourceJar { classifier "sources" }
+    	}
+  	}
   
-repositories {
-	maven {
-	        credentials {
-	            username artifactoryUsername
-	            password artifactoryPassword
-	        }
-	        url "http://ena-dev:8081/artifactory/libs-release-local"
-	    }
+	repositories {
+		maven { url "https://gitlab.ebi.ac.uk/api/v4/projects/811/packages/maven"
+				credentials(HttpHeaderCredentials) {
+		    		name = "Private-Token"
+		        	value = private_token
+		        }
+		        authentication {
+		        	header( HttpHeaderAuthentication )
+				}
+		    }
 	}
 }
 
@@ -140,3 +151,24 @@ test {
     }
 
 }
+
+
+task writePom {
+    doLast {
+        pom {
+            project {
+                inceptionYear '2019'
+                licenses {
+                    license {
+                        name 'The Apache Software License, Version 2.0'
+                        url 'http://www.apache.org/licenses/LICENSE-2.0.txt'
+                        distribution 'repo'
+                    }
+                }
+            }
+        }.writeTo( "pom.xml" )
+    }
+}   
+
+
+compileJava.dependsOn( writePom )

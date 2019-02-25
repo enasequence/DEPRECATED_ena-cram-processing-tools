@@ -1,17 +1,26 @@
+/*
+ * Copyright 2019 EMBL - European Bioinformatics Institute
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this
+ * file except in compliance with the License. You may obtain a copy of the License at
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * Unless required by applicable law or agreed to in writing, software distributed under the
+ * License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
+ * CONDITIONS OF ANY KIND, either express or implied. See the License for the
+ * specific language governing permissions and limitations under the License.
+ */
+
 package net.sf.cram.ref;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.MalformedURLException;
+import java.nio.Buffer;
 import java.nio.ByteBuffer;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Scanner;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-
-import org.checkerframework.checker.regex.RegexUtil;
-import org.checkerframework.checker.regex.qual.Regex;
 
 import htsjdk.samtools.SAMException;
 import htsjdk.samtools.SAMSequenceRecord;
@@ -76,7 +85,7 @@ class ReferenceSequenceFromSeekable {
 			}
 
 			// Reset the buffer for outbound transfers.
-			channelBuffer.flip();
+			( (Buffer) channelBuffer ).flip();
 
 			// Calculate the size of the next run of bases based on the contents
 			// we've already retrieved.
@@ -87,19 +96,19 @@ class ReferenceSequenceFromSeekable {
 			// size of the channel buffer.
 			int bytesToTransfer = Math.min(nextBaseSpan, channelBuffer.capacity());
 
-			channelBuffer.limit(channelBuffer.position() + bytesToTransfer);
+			( (Buffer) channelBuffer ).limit(channelBuffer.position() + bytesToTransfer);
 
 			while (channelBuffer.hasRemaining()) {
 				targetBuffer.put(channelBuffer);
 
 				bytesToTransfer = Math.min(basesPerLine, length - targetBuffer.position());
-				channelBuffer.limit(Math.min(channelBuffer.position() + bytesToTransfer + terminatorLength,
+				( (Buffer) channelBuffer ).limit(Math.min(channelBuffer.position() + bytesToTransfer + terminatorLength,
 						channelBuffer.capacity()));
-				channelBuffer.position(Math.min(channelBuffer.position() + terminatorLength, channelBuffer.capacity()));
+				( (Buffer) channelBuffer ).position(Math.min(channelBuffer.position() + terminatorLength, channelBuffer.capacity()));
 			}
 
 			// Reset the buffer for inbound transfers.
-			channelBuffer.flip();
+			( (Buffer) channelBuffer ).flip();
 		}
 
 		return target;
@@ -128,17 +137,13 @@ class ReferenceSequenceFromSeekable {
 			while( scanner.hasNext() )
 			{
 				// Tokenize and validate the index line.
-				@Regex(5) String pattern = "(.+)\\t+(\\d+)\\s+(\\d+)\\s+(\\d+)\\s+(\\d+)";
+				String pattern = "(.+)\\t+(\\d+)\\s+(\\d+)\\s+(\\d+)\\s+(\\d+)";
 				Pattern compiled = Pattern.compile( pattern );
 				String result = scanner.findInLine( compiled );
 				if( result == null )
 					throw new RuntimeException( "Found invalid line in index file:" + scanner.nextLine() );
 				
-				@Regex(5) Matcher tokens = compiled.matcher( result );//scanner.match() );
-				
-				
-				if( !RegexUtil.isRegex( pattern, 5 ) )
-					throw new RuntimeException( "Regexp flawed: " + pattern );
+				Matcher tokens = compiled.matcher( result );//scanner.match() );
 				
 				if( tokens.groupCount() != 5 )
 					throw new RuntimeException( "Found invalid line in index file:" + scanner.nextLine() );
