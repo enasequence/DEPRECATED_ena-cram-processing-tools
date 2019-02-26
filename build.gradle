@@ -49,7 +49,7 @@ repositories {
 
 dependencies {
     compile 'com.github.samtools:htsjdk:2.13.2'    
-    compile 'org.apache.commons:commons-compress:1.9'   
+    compile 'org.apache.commons:commons-compress:1.18'   
     compile 'com.beust:jcommander:1.48'
     compile 'junit:junit:4.12'
     testCompile 'junit:junit:4.12'
