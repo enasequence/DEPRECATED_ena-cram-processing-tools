@@ -1,14 +1,9 @@
-#cramtools usage in ENA processing:
+# ENA cram processing tools
+[![License](https://img.shields.io/badge/License-Apache%202.0-green.svg)](https://opensource.org/licenses/Apache-2.0)
 
-   [era@oy-ena-login-2 ~]$ cat /homes/era/tools/putils/cram_dump
-   #! /bin/bash
-   java  -XX:+UseSerialGC -Xmx10G
-   -Dsamjdk.use_cram_ref_download=true
-   -Djava.io.tmpdir="/fire/staging/era/tmp" -jar
-   /homes/era/lib/cramtools.jar fastq --reverse --gzip $@
+Typical cramtools usage in processing:
 
-   [era@oy-ena-login-2 ~]$ cat /homes/era/tools/putils/cram_stats
-   #java -Xmx4G -jar /homes/era/lib/cramtools.jar bam -c -I $@
-   java -XX:+UseSerialGC -Xmx4G -cp
-   /homes/era/lib/commons-compress-1.9.jar:/homes/era/lib/cramtools.jar
-   net.sf.cram.CramTools bam -c -F 2304 -I $@ 
+- cram dump:
+`java  -XX:+UseSerialGC -Xmx10G -Dsamjdk.use_cram_ref_download=true -Djava.io.tmpdir="/fire/staging/era/tmp" -jar cramtools.jar fastq --reverse --gzip $@`
+- cram stats:
+`java -XX:+UseSerialGC -Xmx4G -cp cramtools.jar net.sf.cram.CramTools bam -c -F 2304 -I $@`
